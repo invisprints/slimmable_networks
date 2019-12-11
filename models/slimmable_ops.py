@@ -1,6 +1,4 @@
 import torch.nn as nn
-
-
 from utils.config import FLAGS
 
 
