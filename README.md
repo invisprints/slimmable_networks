@@ -42,6 +42,8 @@ AutoSlimming MobileNet v1, MobileNet v2, MNasNet and ResNet-50: the optimized nu
     * Training and testing of MSCOCO benchmarks are released under branch [detection](https://github.com/JiahuiYu/slimmable_networks/tree/detection).
 2. Still have questions?
     * If you still have questions, please search closed issues first. If the problem is not solved, please open a new.
+3. train on cifar10 dataset
+    python train_cifar.py app:apps_c/***.yml
 
 
 ## Slimmable Model Zoo
