@@ -9,7 +9,7 @@ from torch import multiprocessing
 from torchvision import datasets, transforms
 from torch.utils.data.distributed import DistributedSampler
 import numpy as np
-from torch.autograd import Variable
+# from torch.autograd import Variable
 
 from utils.model_profiling import model_profiling
 from utils.transforms import Lighting
@@ -28,11 +28,10 @@ def get_model():
     """get model"""
     model_lib = importlib.import_module(FLAGS.model)
     model = model_lib.Model(FLAGS.num_classes, input_size=FLAGS.image_size)
-    inputs= Variable(torch.randn((2,3,32,32)))
-    output= model(inputs)
-    print(output)
-    print(output.size())
-    #input('pause')
+    inputs= torch.randn((2,3,32,32)) # B,C,H,W
+    # output= model(inputs)
+    # print(output)
+    # print(output.size())
     if getattr(FLAGS, 'distributed', False):
         gpu_id = init_dist()
         if getattr(FLAGS, 'distributed_all_reduce', False):
@@ -809,6 +808,7 @@ def init_multiprocessing():
 def main():
     """train and eval model"""
     init_multiprocessing()
+    print(FLAGS)
     train_val_test()
 
 
