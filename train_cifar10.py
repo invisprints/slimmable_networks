@@ -27,8 +27,9 @@ from utils.meters import ScalarMeter, flush_scalar_meters
 def get_model():
     """get model"""
     model_lib = importlib.import_module(FLAGS.model)
+    # num_classes=10, image_size=32
     model = model_lib.Model(FLAGS.num_classes, input_size=FLAGS.image_size)
-    inputs= torch.randn((2,3,32,32)) # B,C,H,W
+    # inputs= torch.randn((2,3,32,32)) # B,C,H,W
     # output= model(inputs)
     # print(output)
     # print(output.size())

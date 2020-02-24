@@ -63,6 +63,7 @@ class Model(nn.Module):
         self.features = []
 
         # head
+        # building first layer
         assert input_size % 32 == 0
         channels = [
             make_divisible(32 * width_mult)
@@ -81,6 +82,7 @@ class Model(nn.Module):
         )
 
         # body
+        # building inverted residual blocks
         for t, c, n, s in self.block_setting:
             outp = [
                 make_divisible(c * width_mult)
@@ -95,6 +97,7 @@ class Model(nn.Module):
                 channels = outp
 
         # tail
+        # building last several layers
         self.features.append(
             nn.Sequential(
                 SlimmableConv2d(
@@ -105,6 +108,7 @@ class Model(nn.Module):
                 nn.ReLU6(inplace=True),
             )
         )
+        # torchvision don't have avg_pool
         avg_pool_size = input_size // 32
         self.features.append(nn.AvgPool2d(avg_pool_size))
 

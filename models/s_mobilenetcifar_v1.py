@@ -33,7 +33,7 @@ class DepthwiseSeparableConv(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, num_classes=1000, input_size=224):
+    def __init__(self, num_classes=10, input_size=32):
         super(Model, self).__init__()
 
         # setting of inverted residual blocks
