@@ -633,6 +633,7 @@ def train_val_test():
             FLAGS.width_mult_list = FLAGS.width_mult_range
 
     # model
+    # model_wrapper contain data parallel & cuda
     model, model_wrapper = get_model()
     input('model_ok')
     if getattr(FLAGS, 'label_smoothing', 0):
@@ -737,6 +738,7 @@ def train_val_test():
         results = run_one_epoch(
             epoch, train_loader, model_wrapper, criterion, optimizer,
             train_meters, phase='train', soft_criterion=soft_criterion)
+
         lr_scheduler.step()
 
         # val
@@ -746,6 +748,8 @@ def train_val_test():
             results = run_one_epoch(
                 epoch, val_loader, model_wrapper, criterion, optimizer,
                 val_meters, phase='val')
+        if not os.path.exists(FLAGS.log_dir):
+            os.makedirs(FLAGS.log_dir)
         if is_master() and results['top1_error'] < best_val:
             best_val = results['top1_error']
             torch.save(
