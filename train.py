@@ -9,6 +9,7 @@ from torch import multiprocessing
 from torchvision import datasets, transforms
 from torch.utils.data.distributed import DistributedSampler
 import numpy as np
+# from torch.autograd import Variable
 
 from utils.model_profiling import model_profiling
 from utils.transforms import Lighting
@@ -79,6 +80,24 @@ def data_transforms():
             transforms.Normalize(mean=mean, std=std),
         ])
         test_transforms = val_transforms
+    elif FLAGS.data_transforms in ['cifar10_rancrop_flip']:
+        input('cifar10_rancrop_flip')
+        if FLAGS.data_transforms == 'cifar10_rancrop_flip':
+            mean = [0.4914, 0.4822, 0.4465]
+            std = [0.2023, 0.1994, 0.2010]
+        train_transforms = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std),
+        ])
+        val_transforms = transforms.Compose([
+            transforms.Resize(32),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=mean, std=std),
+        ])
+        test_transforms = val_transforms
+
     else:
         try:
             transforms_lib = importlib.import_module(FLAGS.data_transforms)
@@ -103,6 +122,18 @@ def dataset(train_transforms, val_transforms, test_transforms):
             os.path.join(FLAGS.dataset_dir, 'val'),
             transform=val_transforms)
         test_set = None
+    elif FLAGS.dataset == 'cifar10':
+        if not FLAGS.test_only:
+            train_set = datasets.CIFAR10(root='./data', train=True,
+                                            download=True, transform=train_transforms)
+        else:
+            train_set = None
+        val_set = datasets.CIFAR10(root='./data', train=False,
+                                           download=True, transform=val_transforms)
+        test_set = None
+
+
+
     else:
         try:
             dataset_lib = importlib.import_module(FLAGS.dataset)
@@ -161,6 +192,36 @@ def data_loader(train_set, val_set, test_set):
             num_workers=FLAGS.data_loader_workers,
             drop_last=getattr(FLAGS, 'drop_last', False))
         test_loader = val_loader
+    elif FLAGS.data_loader == 'cifar10_loader':
+
+        if getattr(FLAGS, 'distributed', False):
+            if FLAGS.test_only:
+                train_sampler = None
+            else:
+                train_sampler = DistributedSampler(train_set)
+            val_sampler = DistributedSampler(val_set)
+        else:
+            train_sampler = None
+            val_sampler = None
+        if not FLAGS.test_only:
+            train_loader = torch.utils.data.DataLoader(
+                train_set,
+                batch_size=batch_size,
+                shuffle=(train_sampler is None),
+                sampler=train_sampler,
+                pin_memory=True,
+                num_workers=FLAGS.data_loader_workers,
+                drop_last=getattr(FLAGS, 'drop_last', False))
+        val_loader = torch.utils.data.DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            sampler=val_sampler,
+            pin_memory=True,
+            num_workers=FLAGS.data_loader_workers,
+            drop_last=getattr(FLAGS, 'drop_last', False))
+        test_loader = val_loader
+
     else:
         try:
             data_loader_lib = importlib.import_module(FLAGS.data_loader)
@@ -548,6 +609,7 @@ def train_val_test():
             FLAGS.width_mult_list = FLAGS.width_mult_range
 
     # model
+    # model_wrapper contain data parallel & cuda
     model, model_wrapper = get_model()
     if getattr(FLAGS, 'label_smoothing', 0):
         criterion = CrossEntropyLossSmooth(reduction='none')
@@ -575,7 +637,6 @@ def train_val_test():
             checkpoint = new_checkpoint
         model_wrapper.load_state_dict(checkpoint)
         print('Loaded model {}.'.format(FLAGS.pretrained))
-
     optimizer = get_optimizer(model_wrapper)
 
     # check resume training
@@ -607,7 +668,7 @@ def train_val_test():
                 profiling(model, use_cuda=False)
             if getattr(FLAGS, 'profiling_only', False):
                 return
-
+    print('loading data!')
     # data
     train_transforms, val_transforms, test_transforms = data_transforms()
     train_set, val_set, test_set = dataset(
@@ -639,11 +700,12 @@ def train_val_test():
         if getattr(FLAGS, 'skip_training', False):
             print('Skip training at epoch: {}'.format(epoch))
             break
-        lr_scheduler.step()
         # train
         results = run_one_epoch(
             epoch, train_loader, model_wrapper, criterion, optimizer,
             train_meters, phase='train', soft_criterion=soft_criterion)
+
+        lr_scheduler.step()
 
         # val
         if val_meters is not None:
@@ -652,6 +714,8 @@ def train_val_test():
             results = run_one_epoch(
                 epoch, val_loader, model_wrapper, criterion, optimizer,
                 val_meters, phase='val')
+        if not os.path.exists(FLAGS.log_dir):
+            os.makedirs(FLAGS.log_dir)
         if is_master() and results['top1_error'] < best_val:
             best_val = results['top1_error']
             torch.save(
@@ -715,6 +779,7 @@ def init_multiprocessing():
 def main():
     """train and eval model"""
     init_multiprocessing()
+    print(FLAGS)
     train_val_test()
 
 
