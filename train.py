@@ -9,7 +9,7 @@ from torch import multiprocessing
 from torchvision import datasets, transforms
 from torch.utils.data.distributed import DistributedSampler
 import numpy as np
-from fastprogress.fastprogress import master_bar, progress_bar
+from tqdm import tqdm
 
 from utils.model_profiling import model_profiling
 from utils.transforms import Lighting
@@ -457,10 +457,7 @@ def run_one_epoch(
 
     if getattr(FLAGS, 'distributed', False):
         loader.sampler.set_epoch(epoch)
-    pbar = progress_bar(range(len(loader)))
-    pbar.update(0)
-    for batch_idx, (input, target) in enumerate(loader):
-        pbar.update(batch_idx)
+    for batch_idx, (input, target) in enumerate(tqdm(loader)):
         if phase == 'cal':
             if batch_idx == getattr(FLAGS, 'bn_cal_batch_num', -1):
                 break
