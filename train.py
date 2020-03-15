@@ -576,7 +576,7 @@ def run_one_epoch(
                 writer.add_scalars('{} loss'.format(phase),
                                    {str(width_mult): results['loss']},
                                    epoch)
-                writer.add_scalar('lr', results['lr'])
+                writer.add_scalar('lr', results['lr'], epoch)
     elif is_master():
         results = flush_scalar_meters(meters)
         print(
