@@ -436,7 +436,7 @@ def forward_loss(
 
 def run_one_epoch(
         epoch, loader, model, criterion, optimizer, meters, phase='train',
-        soft_criterion=None):
+        soft_criterion=None, writer=None):
     """run one epoch for train/val/test/cal"""
     t_start = time.time()
     assert phase in ['train', 'val', 'test', 'cal'], 'Invalid phase.'
@@ -534,7 +534,7 @@ def run_one_epoch(
                                 loss = forward_loss(
                                     model, criterion, input, target, meter)
                         loss.backward()
-            else:
+            else: # naive training
                 loss = forward_loss(
                     model, criterion, input, target, meters)
                 loss.backward()
@@ -550,7 +550,7 @@ def run_one_epoch(
                 meters['lr'].cache(optimizer.param_groups[0]['lr'])
             else:
                 pass
-        else:
+        else: #val
             if getattr(FLAGS, 'slimmable_training', False):
                 for width_mult in sorted(FLAGS.width_mult_list, reverse=True):
                     model.apply(
@@ -569,6 +569,14 @@ def run_one_epoch(
                 time.time() - t_start, phase, str(width_mult), epoch,
                 FLAGS.num_epochs) + ', '.join(
                     '{}: {:.3f}'.format(k, v) for k, v in results.items()))
+            if writer:
+                writer.add_scalars('{} err'.format(phase),
+                                   {str(width_mult): results['top1_error']},
+                                  epoch)
+                writer.add_scalars('{} loss'.format(phase),
+                                   {str(width_mult): results['loss']},
+                                   epoch)
+                writer.add_scalar('lr', results['lr'])
     elif is_master():
         results = flush_scalar_meters(meters)
         print(
@@ -577,6 +585,8 @@ def run_one_epoch(
             ', '.join('{}: {:.3f}'.format(k, v) for k, v in results.items()))
     else:
         results = None
+
+
     return results
 
 
@@ -696,6 +706,15 @@ def train_val_test():
     if getattr(FLAGS, 'nonuniform_diff_seed', False):
         set_random_seed(getattr(FLAGS, 'random_seed', 0) + get_rank())
     print('Start training.')
+
+    if getattr(FLAGS,'SummaryWriter', False):
+        from torch.utils.tensorboard import SummaryWriter
+        writer = SummaryWriter('runs/slimmable_training')
+        print("TensorBoard start!")
+    else:
+        print("TensorBoard close")
+        writer=None
+
     for epoch in range(last_epoch+1, FLAGS.num_epochs):
         if getattr(FLAGS, 'skip_training', False):
             print('Skip training at epoch: {}'.format(epoch))
@@ -703,7 +722,7 @@ def train_val_test():
         # train
         results = run_one_epoch(
             epoch, train_loader, model_wrapper, criterion, optimizer,
-            train_meters, phase='train', soft_criterion=soft_criterion)
+            train_meters, phase='train', soft_criterion=soft_criterion, writer=writer)
 
         lr_scheduler.step()
 
