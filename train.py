@@ -576,7 +576,8 @@ def run_one_epoch(
                 writer.add_scalars('{} loss'.format(phase),
                                    {str(width_mult): results['loss']},
                                    epoch)
-                writer.add_scalar('lr', results['lr'], epoch)
+                if phase == 'train':
+                    writer.add_scalar('lr', results['lr'], epoch)
     elif is_master():
         results = flush_scalar_meters(meters)
         print(
@@ -732,7 +733,7 @@ def train_val_test():
         with torch.no_grad():
             results = run_one_epoch(
                 epoch, val_loader, model_wrapper, criterion, optimizer,
-                val_meters, phase='val')
+                val_meters, phase='val', writer=writer)
         if not os.path.exists(FLAGS.log_dir):
             os.makedirs(FLAGS.log_dir)
         if is_master() and results['top1_error'] < best_val:
