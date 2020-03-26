@@ -11,6 +11,11 @@ Illustration of slimmable neural networks. The same model can run at different w
 
 0. Requirements:
     * Setup according to [mmdetection](https://github.com/open-mmlab/mmdetection) based on commit [86e25e](https://github.com/open-mmlab/mmdetection/tree/86e25e41aea1c2170c0b242e486b1d4685134f31).
+    ```shell script
+    pip install -r requirements.txt
+    ./compile.sh
+    pip install .
+   ```
 1. Testing:
     * Download our [pretrained models](https://drive.google.com/open?id=1ueqa1BYhDQ0ANm1j3NwrSTgNfKkPmrdJ) of mask-rcnn and faster-rcnn.
     * Choose the width multiplier to evaluate, where width ratio can be selected from {0.25, 0.5, 0.75, 1.0}.
